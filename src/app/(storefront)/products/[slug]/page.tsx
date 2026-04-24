@@ -1,24 +1,28 @@
 'use client';
 
 // ============================================================
-// Trang Chi Tiết Sản Phẩm (giống MOHO)
+// Trang Chi Tiết Sản Phẩm - API-driven
 // Gallery bên trái | Info bên phải
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Star, Minus, Plus, ShoppingBag, Zap, Truck, Shield, RotateCcw, Share2, Heart, Check } from 'lucide-react';
+import { Star, Minus, Plus, ShoppingBag, Zap, Truck, Shield, RotateCcw, Share2, Heart, Check, Loader2 } from 'lucide-react';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import ProductCard from '@/components/product/ProductCard';
-import { mockProducts } from '@/lib/mock-data';
+import { getProductBySlug, getRelatedProducts } from '@/lib/api/products';
 import { formatPrice, calcDiscount, cn } from '@/lib/utils';
 import { useCartStore } from '@/stores/cart.store';
+import type { Product } from '@/types';
 
 const ProductDetailPage = () => {
   const params = useParams();
-  const product = mockProducts.find((p) => p.slug === params.slug) || mockProducts[0];
-  const relatedProducts = mockProducts.filter((p) => p.id !== product.id).slice(0, 4);
+  const slug = params.slug as string;
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -26,7 +30,58 @@ const ProductDetailPage = () => {
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
   const addItem = useCartStore((s) => s.addItem);
 
-  const currentVariant = product.variants[selectedVariantIndex];
+  // Fetch sản phẩm từ API
+  useEffect(() => {
+    const loadProduct = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await getProductBySlug(slug);
+        if (!data) {
+          setError('Sản phẩm không tồn tại hoặc đã bị xóa.');
+          return;
+        }
+        setProduct(data);
+
+        // Load sản phẩm liên quan
+        const relatedData = await getRelatedProducts(data.id, data.categoryId, 4);
+        setRelated(relatedData);
+      } catch {
+        setError('Có lỗi xảy ra khi tải sản phẩm.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProduct();
+  }, [slug]);
+
+  // --- Loading State ---
+  if (loading) {
+    return (
+      <div className="bg-bg-primary min-h-screen">
+        <div className="container-main py-20 flex items-center justify-center">
+          <Loader2 size={40} className="animate-spin text-primary" />
+          <span className="ml-4 text-lg text-text-secondary">Đang tải sản phẩm...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Error State ---
+  if (error || !product) {
+    return (
+      <div className="bg-bg-primary min-h-screen">
+        <div className="container-main py-20 text-center">
+          <p className="text-2xl font-bold text-navy">{error || 'Không tìm thấy sản phẩm'}</p>
+          <a href="/products" className="mt-6 inline-block btn-primary rounded">
+            ← Quay lại danh sách
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const currentVariant = product.variants?.[selectedVariantIndex];
   const discount = calcDiscount(product.price, product.comparePrice);
 
   const handleAddToCart = () => {
@@ -35,7 +90,6 @@ const ProductDetailPage = () => {
 
   const handleBuyNow = () => {
     addItem(product, currentVariant, quantity);
-    // Redirect to checkout
     window.location.href = '/cart';
   };
 
@@ -62,7 +116,7 @@ const ProductDetailPage = () => {
           <div className="flex gap-3">
             {/* Thumbnail column */}
             <div className="hidden md:flex flex-col gap-2 w-20">
-              {product.images.map((img, index) => (
+              {product.images?.map((img, index) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImageIndex(index)}
@@ -75,7 +129,7 @@ const ProductDetailPage = () => {
                 >
                   <Image
                     src={img.imageUrl}
-                    alt={img.altText}
+                    alt={img.altText || product.name}
                     fill
                     className="object-cover"
                     unoptimized
@@ -87,7 +141,7 @@ const ProductDetailPage = () => {
             {/* Main image */}
             <div className="flex-1 relative aspect-square rounded-lg overflow-hidden bg-bg-secondary">
               <Image
-                src={product.images[selectedImageIndex]?.imageUrl || '/images/placeholder.jpg'}
+                src={product.images?.[selectedImageIndex]?.imageUrl || '/images/placeholder.jpg'}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -102,7 +156,6 @@ const ProductDetailPage = () => {
 
           {/* --- Info bên phải --- */}
           <div>
-            {/* Tiêu đề + Share */}
             <div className="flex items-start justify-between gap-4">
               <h1 className="text-xl md:text-2xl font-bold text-navy leading-tight">
                 {product.name}
@@ -117,7 +170,6 @@ const ProductDetailPage = () => {
               </div>
             </div>
 
-            {/* SKU + Đã bán */}
             <div className="flex items-center gap-4 mt-2 text-sm text-text-muted">
               <span>SKU: {product.sku}</span>
               <span>Đã bán: {product.soldCount}</span>
@@ -141,7 +193,7 @@ const ProductDetailPage = () => {
             </div>
 
             {/* Chọn màu sắc */}
-            {product.variants.length > 0 && (
+            {product.variants && product.variants.length > 0 && (
               <div className="mt-5">
                 <p className="text-sm font-medium text-navy mb-2">
                   Màu sắc: <span className="text-text-secondary">{currentVariant?.color}</span>
@@ -167,8 +219,8 @@ const ProductDetailPage = () => {
 
             {/* Kích thước + Chất liệu */}
             <div className="mt-5 space-y-2 text-sm">
-              <p><span className="font-semibold text-navy">Kích thước:</span> {product.dimensions}</p>
-              <p><span className="font-semibold text-navy">Chất liệu:</span> {product.material}</p>
+              {product.dimensions && <p><span className="font-semibold text-navy">Kích thước:</span> {product.dimensions}</p>}
+              {product.material && <p><span className="font-semibold text-navy">Chất liệu:</span> {product.material}</p>}
             </div>
 
             {/* Quantity selector */}
@@ -239,9 +291,12 @@ const ProductDetailPage = () => {
 
           <div className="py-6 max-w-3xl">
             {activeTab === 'description' && (
-              <div className="prose prose-sm text-text-secondary leading-relaxed">
-                <p>{product.description}</p>
-              </div>
+              <div
+                className="prose prose-sm text-text-secondary leading-relaxed"
+                dangerouslySetInnerHTML={{
+                  __html: product.description || '<p>Chưa có mô tả cho sản phẩm này.</p>',
+                }}
+              />
             )}
             {activeTab === 'specs' && (
               <table className="w-full text-sm">
@@ -249,12 +304,12 @@ const ProductDetailPage = () => {
                   {[
                     ['Kích thước', product.dimensions],
                     ['Chất liệu', product.material],
-                    ['Trọng lượng', `${product.weight} kg`],
+                    ['Trọng lượng', product.weight ? `${product.weight} kg` : '—'],
                     ['SKU', product.sku],
                   ].map(([label, value]) => (
                     <tr key={label} className="border-b border-border-light">
                       <td className="py-3 pr-4 font-semibold text-navy w-40">{label}</td>
-                      <td className="py-3 text-text-secondary">{value}</td>
+                      <td className="py-3 text-text-secondary">{value || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -273,16 +328,18 @@ const ProductDetailPage = () => {
         </div>
 
         {/* === Sản phẩm liên quan === */}
-        <div className="py-8 border-t border-border-light">
-          <div className="section-heading">
-            <h2>Sản Phẩm Liên Quan</h2>
+        {related.length > 0 && (
+          <div className="py-8 border-t border-border-light">
+            <div className="section-heading">
+              <h2>Sản Phẩm Liên Quan</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {related.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

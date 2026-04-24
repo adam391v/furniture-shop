@@ -17,6 +17,17 @@ const requireAdmin = async () => {
   return user;
 };
 
+// --- Helper: Serialize Decimal fields ---
+const serializeProduct = (p: Record<string, unknown>) => ({
+  ...p,
+  price: Number(p.price),
+  comparePrice: p.comparePrice ? Number(p.comparePrice) : 0,
+  weight: p.weight ? Number(p.weight) : 0,
+  variants: Array.isArray(p.variants)
+    ? p.variants.map((v: Record<string, unknown>) => ({ ...v, price: Number(v.price) }))
+    : [],
+});
+
 // GET /api/admin/products - Lấy danh sách sản phẩm
 export async function GET(request: Request) {
   const admin = await requireAdmin();
@@ -43,8 +54,9 @@ export async function GET(request: Request) {
       prisma.product.findMany({
         where,
         include: {
-          category: { select: { name: true } },
+          category: { select: { id: true, name: true, slug: true } },
           images: { take: 1, orderBy: { sortOrder: 'asc' } },
+          variants: true,
           _count: { select: { reviews: true, orderItems: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -55,7 +67,7 @@ export async function GET(request: Request) {
     ]);
 
     return NextResponse.json({
-      products,
+      products: products.map(serializeProduct),
       pagination: {
         page,
         limit,
@@ -88,7 +100,9 @@ export async function POST(request: Request) {
 
     const data = parsed.data;
     const slug = createSlug(data.name);
+    const images: string[] = body.images || [];
 
+    // Tạo sản phẩm + ảnh trong transaction
     const product = await prisma.product.create({
       data: {
         name: data.name,
@@ -106,10 +120,21 @@ export async function POST(request: Request) {
         isFeatured: data.isFeatured ?? false,
         seoTitle: data.name,
         seoDescription: data.shortDescription,
+        images: {
+          create: images.map((url: string, index: number) => ({
+            imageUrl: url,
+            altText: `${data.name} - Ảnh ${index + 1}`,
+            sortOrder: index,
+          })),
+        },
+      },
+      include: {
+        images: true,
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
-    return NextResponse.json({ product }, { status: 201 });
+    return NextResponse.json({ product: serializeProduct(product as unknown as Record<string, unknown>) }, { status: 201 });
   } catch (error) {
     console.error('[ADMIN PRODUCTS POST]', error);
     return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });

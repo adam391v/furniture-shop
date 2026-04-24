@@ -1,5 +1,6 @@
 // ============================================================
 // Admin API - Sản phẩm theo ID: GET | PUT | DELETE
+// Hỗ trợ cập nhật images, serialize Decimal
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -14,6 +15,17 @@ const requireAdmin = async () => {
   return user;
 };
 
+// Helper: serialize Decimal
+const serialize = (p: Record<string, unknown>) => ({
+  ...p,
+  price: Number(p.price),
+  comparePrice: p.comparePrice ? Number(p.comparePrice) : 0,
+  weight: p.weight ? Number(p.weight) : 0,
+  variants: Array.isArray(p.variants)
+    ? p.variants.map((v: Record<string, unknown>) => ({ ...v, price: Number(v.price) }))
+    : [],
+});
+
 // GET /api/admin/products/[id]
 export async function GET(
   request: Request,
@@ -27,7 +39,7 @@ export async function GET(
     const product = await prisma.product.findUnique({
       where: { id: parseInt(id) },
       include: {
-        category: true,
+        category: { select: { id: true, name: true, slug: true } },
         images: { orderBy: { sortOrder: 'asc' } },
         variants: true,
       },
@@ -37,8 +49,9 @@ export async function GET(
       return NextResponse.json({ error: 'Không tìm thấy sản phẩm' }, { status: 404 });
     }
 
-    return NextResponse.json({ product });
+    return NextResponse.json({ product: serialize(product as unknown as Record<string, unknown>) });
   } catch (error) {
+    console.error('[ADMIN PRODUCT GET]', error);
     return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });
   }
 }
@@ -52,8 +65,21 @@ export async function PUT(
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
   const { id } = await params;
+  const productId = parseInt(id);
+
   try {
     const body = await request.json();
+
+    // Cho phép partial update (chỉ toggle isActive)
+    if (Object.keys(body).length === 1 && 'isActive' in body) {
+      const product = await prisma.product.update({
+        where: { id: productId },
+        data: { isActive: body.isActive },
+      });
+      return NextResponse.json({ product: serialize(product as unknown as Record<string, unknown>) });
+    }
+
+    // Full update - validate
     const parsed = productSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -63,8 +89,11 @@ export async function PUT(
     }
 
     const data = parsed.data;
+    const images: string[] = body.images || [];
+
+    // Cập nhật sản phẩm
     const product = await prisma.product.update({
-      where: { id: parseInt(id) },
+      where: { id: productId },
       data: {
         name: data.name,
         slug: createSlug(data.name),
@@ -82,8 +111,32 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ product });
+    // Cập nhật ảnh: xóa ảnh cũ → tạo ảnh mới
+    if (images.length > 0) {
+      await prisma.productImage.deleteMany({ where: { productId } });
+      await prisma.productImage.createMany({
+        data: images.map((url: string, index: number) => ({
+          productId,
+          imageUrl: url,
+          altText: `${data.name} - Ảnh ${index + 1}`,
+          sortOrder: index,
+        })),
+      });
+    }
+
+    // Reload product with images
+    const updated = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        images: { orderBy: { sortOrder: 'asc' } },
+        variants: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    return NextResponse.json({ product: serialize(updated as unknown as Record<string, unknown>) });
   } catch (error) {
+    console.error('[ADMIN PRODUCT PUT]', error);
     return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });
   }
 }
@@ -98,9 +151,12 @@ export async function DELETE(
 
   const { id } = await params;
   try {
+    // Xóa images trước (cascade xóa variants đã có trong schema)
+    await prisma.productImage.deleteMany({ where: { productId: parseInt(id) } });
     await prisma.product.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ message: 'Đã xóa sản phẩm' });
   } catch (error) {
+    console.error('[ADMIN PRODUCT DELETE]', error);
     return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });
   }
 }
