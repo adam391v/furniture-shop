@@ -1,14 +1,15 @@
 'use client';
 
 // ============================================================
-// ProductFilters Component - Bộ lọc sản phẩm (giống MOHO)
-// Danh mục | Giá | Màu sắc | Kích thước
+// ProductFilters Component - Bộ lọc sản phẩm
+// API-driven: Lấy danh mục từ /api/categories
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockCategories } from '@/lib/mock-data';
+import { getCategories } from '@/lib/api/products';
+import type { Category } from '@/types';
 
 interface ProductFiltersProps {
   onFilterChange?: (filters: Record<string, string>) => void;
@@ -41,6 +42,14 @@ const ProductFilters = ({ onFilterChange }: ProductFiltersProps) => {
   const [selectedPrice, setSelectedPrice] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch danh mục từ API
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
 
   const toggleFilter = (filter: FilterType) => {
     setOpenFilter(openFilter === filter ? null : filter);
@@ -95,18 +104,22 @@ const ProductFilters = ({ onFilterChange }: ProductFiltersProps) => {
               <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-border rounded-lg shadow-xl z-30 p-3 animate-fade-in">
                 {btn.type === 'category' && (
                   <div className="space-y-1">
-                    {mockCategories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => { setSelectedCategory(cat.slug); setOpenFilter(null); }}
-                        className={cn(
-                          'w-full text-left px-3 py-2 text-sm rounded hover:bg-bg-secondary transition-colors',
-                          selectedCategory === cat.slug ? 'bg-primary/10 text-primary font-medium' : 'text-navy'
-                        )}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
+                    {categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => { setSelectedCategory(cat.slug); setOpenFilter(null); }}
+                          className={cn(
+                            'w-full text-left px-3 py-2 text-sm rounded hover:bg-bg-secondary transition-colors',
+                            selectedCategory === cat.slug ? 'bg-primary/10 text-primary font-medium' : 'text-navy'
+                          )}
+                        >
+                          {cat.name}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-xs text-text-muted text-center py-2">Đang tải...</p>
+                    )}
                   </div>
                 )}
 

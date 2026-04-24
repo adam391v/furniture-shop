@@ -3,7 +3,7 @@
 // ============================================================
 // Header Component - Thanh điều hướng chính (giống MOHO)
 // Logo trái | Search giữa | Account + Cart phải
-// Tích hợp auth state: hiển thị tên user hoặc nút đăng nhập
+// Danh mục lấy từ API /api/categories
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
@@ -12,8 +12,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Search, User, ShoppingBag, Menu, X, ChevronDown, Phone, Heart, LogOut, Settings, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '@/stores/cart.store';
 import { useAuthStore } from '@/stores/auth.store';
-import { mockCategories } from '@/lib/mock-data';
+import { getCategories } from '@/lib/api/products';
 import { cn } from '@/lib/utils';
+import type { Category } from '@/types';
 
 const navItems = [
   { label: 'Sản phẩm', href: '/products', hasDropdown: true },
@@ -31,11 +32,19 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const getItemCount = useCartStore((s) => s.getItemCount);
   const { user, logout } = useAuthStore();
   const accountRef = useRef<HTMLDivElement>(null);
+
+  // Fetch danh mục từ API
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
 
   // Theo dõi scroll
   useEffect(() => {
@@ -268,23 +277,32 @@ const Header = () => {
                   {item.hasDropdown && <ChevronDown size={14} />}
                 </Link>
 
-                {/* Mega dropdown "Sản phẩm" */}
+                {/* Mega dropdown "Sản phẩm" - từ API */}
                 {item.label === 'Sản phẩm' && activeDropdown === 'Sản phẩm' && (
                   <div className="absolute top-full left-0 w-[600px] bg-white shadow-xl border border-border-light rounded-b-lg p-6 z-50 animate-fade-in">
-                    <div className="grid grid-cols-3 gap-4">
-                      {mockCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          href={`/products?category=${cat.slug}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors"
-                        >
-                          <div className="w-10 h-10 bg-bg-secondary rounded-lg flex items-center justify-center">
-                            <span className="text-lg">🪑</span>
-                          </div>
-                          <span className="text-sm font-medium text-navy">{cat.name}</span>
-                        </Link>
-                      ))}
-                    </div>
+                    {categories.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-4">
+                        {categories.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            href={`/products?category=${cat.slug}`}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors"
+                          >
+                            {/* Ảnh danh mục hoặc icon */}
+                            <div className="w-10 h-10 bg-bg-secondary rounded-lg flex items-center justify-center overflow-hidden">
+                              {cat.imageUrl ? (
+                                <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <span className="text-lg">🪑</span>
+                              )}
+                            </div>
+                            <span className="text-sm font-medium text-navy">{cat.name}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-text-muted text-center py-4">Đang tải danh mục...</p>
+                    )}
                     <div className="mt-4 pt-4 border-t border-border-light">
                       <Link
                         href="/products"
@@ -360,21 +378,30 @@ const Header = () => {
               ))}
             </ul>
 
+            {/* Danh mục từ API */}
             <div className="mt-6 pt-6 border-t border-border-light">
               <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-4">
                 Danh mục
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                {mockCategories.slice(0, 6).map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/products?category=${cat.slug}`}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-bg-secondary transition-colors"
-                  >
-                    <span>🪑</span>
-                    <span className="text-sm text-navy">{cat.name}</span>
-                  </Link>
-                ))}
+                {categories.length > 0 ? (
+                  categories.slice(0, 6).map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={`/products?category=${cat.slug}`}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-bg-secondary transition-colors"
+                    >
+                      {cat.imageUrl ? (
+                        <img src={cat.imageUrl} alt={cat.name} className="w-6 h-6 rounded object-cover" />
+                      ) : (
+                        <span>🪑</span>
+                      )}
+                      <span className="text-sm text-navy">{cat.name}</span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-xs text-text-muted col-span-2 px-4">Đang tải...</p>
+                )}
               </div>
             </div>
           </nav>

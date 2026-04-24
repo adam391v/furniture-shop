@@ -2,18 +2,75 @@
 
 // ============================================================
 // Testimonials Component - Đánh giá từ khách hàng
+// API-driven: Lấy từ /api/reviews/featured
+// Fallback dữ liệu mặc định nếu DB trống
 // ============================================================
 
-import { useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
-import { mockTestimonials } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { Star, ChevronLeft, ChevronRight, Quote, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface Testimonial {
+  id: number;
+  name: string;
+  content: string;
+  rating: number;
+  avatarUrl?: string | null;
+  productName?: string;
+}
+
+// Dữ liệu mặc định khi DB chưa có reviews
+const defaultTestimonials: Testimonial[] = [
+  {
+    id: 1,
+    name: 'Nguyễn Thị Mai',
+    content: 'Mình rất hài lòng với bộ sofa MOCHI. Chất vải đẹp, ngồi rất êm. Giao hàng nhanh, nhân viên lắp đặt rất nhiệt tình.',
+    rating: 5,
+  },
+  {
+    id: 2,
+    name: 'Trần Văn Hùng',
+    content: 'Giường COMET chất lượng xuất sắc. Thiết kế đẹp, chắc chắn. Rất đáng đồng tiền!',
+    rating: 5,
+  },
+  {
+    id: 3,
+    name: 'Lê Thị Hương',
+    content: 'Tủ quần áo ASTRO rộng rãi, chứa được rất nhiều đồ. Kính cường lực sáng bóng, nhìn rất sang trọng.',
+    rating: 4,
+  },
+];
+
 const Testimonials = () => {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
 
-  const next = () => setCurrent((prev) => (prev + 1) % mockTestimonials.length);
-  const prev = () => setCurrent((prev) => (prev - 1 + mockTestimonials.length) % mockTestimonials.length);
+  useEffect(() => {
+    fetch('/api/reviews/featured')
+      .then((res) => res.json())
+      .then((data) => {
+        // Nếu API trả về rỗng → dùng data mặc định
+        setTestimonials(data.testimonials?.length > 0 ? data.testimonials : defaultTestimonials);
+      })
+      .catch(() => setTestimonials(defaultTestimonials))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const next = () => setCurrent((prev) => (prev + 1) % testimonials.length);
+  const prev = () => setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+
+  if (loading) {
+    return (
+      <section className="py-12 md:py-16">
+        <div className="container-main flex items-center justify-center py-8">
+          <Loader2 size={24} className="animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
+
+  if (testimonials.length === 0) return null;
 
   return (
     <section className="py-12 md:py-16">
@@ -27,7 +84,7 @@ const Testimonials = () => {
           <div className="relative bg-white rounded-2xl shadow-lg p-8 md:p-12">
             <Quote size={40} className="text-primary/20 mb-4" />
 
-            {mockTestimonials.map((item, index) => (
+            {testimonials.map((item, index) => (
               <div
                 key={item.id}
                 className={cn(
@@ -57,12 +114,18 @@ const Testimonials = () => {
 
                 {/* Thông tin khách hàng */}
                 <div className="flex items-center gap-4 mt-5">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
-                    {item.name.charAt(0)}
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary overflow-hidden">
+                    {item.avatarUrl ? (
+                      <img src={item.avatarUrl} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      item.name.charAt(0)
+                    )}
                   </div>
                   <div>
                     <h4 className="font-bold text-navy">{item.name}</h4>
-                    <p className="text-sm text-text-muted">Khách hàng</p>
+                    <p className="text-sm text-text-muted">
+                      {item.productName ? `Đã mua: ${item.productName}` : 'Khách hàng'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -83,7 +146,7 @@ const Testimonials = () => {
                 <ChevronRight size={18} />
               </button>
               <span className="ml-auto text-sm text-text-muted">
-                {current + 1} / {mockTestimonials.length}
+                {current + 1} / {testimonials.length}
               </span>
             </div>
           </div>
