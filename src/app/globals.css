@@ -1,26 +1,209 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   Design System - Furniture Shop (Lấy cảm hứng từ MOHO)
+   ============================================================ */
+
+@theme {
+  /* --- Bảng màu chính --- */
+  --color-primary: #E87A2D;
+  --color-primary-dark: #D06820;
+  --color-primary-light: #F5A66B;
+  
+  --color-navy: #2D3748;
+  --color-navy-dark: #1A202C;
+  --color-navy-light: #4A5568;
+  
+  --color-red: #E53E3E;
+  --color-red-dark: #C53030;
+  
+  --color-success: #38A169;
+  
+  /* --- Màu nền & text --- */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F7F8FA;
+  --color-bg-dark: #1A202C;
+  
+  --color-text-primary: #2D3748;
+  --color-text-secondary: #718096;
+  --color-text-muted: #A0AEC0;
+  
+  --color-border: #E2E8F0;
+  --color-border-light: #EDF2F7;
+  
+  /* --- Font - chỉ dùng system font, Google Font load từ layout.tsx --- */
+  --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ============================================================
+   Base Styles
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Animation Keyframes
+   ============================================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* ============================================================
+   Component Utilities
+   ============================================================ */
+
+.container-main {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 1280px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.badge-discount {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 10;
+  background-color: var(--color-red);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  border-radius: 0.25rem;
+}
+
+.product-card {
+  position: relative;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.product-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  transform: translateY(-4px);
+}
+
+.product-card:hover .product-card-image {
+  transform: scale(1.05);
+}
+
+.btn-primary {
+  background-color: var(--color-navy);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-navy-dark);
+}
+
+.btn-buy {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-buy:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-checkout {
+  background-color: var(--color-red);
+  color: white;
+  font-weight: 700;
+  padding: 0.875rem 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+  width: 100%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  display: block;
+  text-align: center;
+}
+
+.btn-checkout:hover {
+  background-color: var(--color-red-dark);
+}
+
+.section-heading {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-heading h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section-heading::after {
+  content: '';
+  display: block;
+  width: 4rem;
+  height: 2px;
+  background-color: var(--color-navy);
+  margin: 1rem auto 0;
+}
+
+.price-sale {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.price-original {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  margin-left: 0.5rem;
 }
