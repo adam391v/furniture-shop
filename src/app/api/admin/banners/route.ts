@@ -2,6 +2,7 @@
 // Admin API - Quản lý Banner
 // GET  /api/admin/banners - Danh sách
 // POST /api/admin/banners - Tạo mới
+// Banner chỉ gồm: imageUrl + linkUrl (không có title/subtitle)
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -34,11 +35,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, subtitle, imageUrl, linkUrl } = body;
+    const { imageUrl, linkUrl } = body;
 
-    if (!title?.trim()) {
-      return NextResponse.json({ error: 'Tiêu đề không được để trống' }, { status: 400 });
-    }
     if (!imageUrl?.trim()) {
       return NextResponse.json({ error: 'Ảnh banner là bắt buộc' }, { status: 400 });
     }
@@ -49,8 +47,6 @@ export async function POST(request: Request) {
 
     const banner = await prisma.banner.create({
       data: {
-        title: title.trim(),
-        subtitle: subtitle?.trim() || null,
         imageUrl: imageUrl.trim(),
         linkUrl: linkUrl?.trim() || null,
         sortOrder: nextSort,

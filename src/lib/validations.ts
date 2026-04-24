@@ -91,3 +91,29 @@ export const userUpdateSchema = z.object({
   role: z.enum(['customer', 'admin']).optional(),
   phone: z.string().optional(),
 });
+
+// --- Checkout (đặt hàng) ---
+
+export const checkoutSchema = z.object({
+  shippingName: z.string().min(1, 'Vui lòng nhập họ tên người nhận'),
+  shippingPhone: z
+    .string()
+    .min(1, 'Vui lòng nhập số điện thoại')
+    .regex(/^(0[0-9]{9,10})$/, 'Số điện thoại không hợp lệ'),
+  shippingEmail: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
+  shippingAddress: z.string().min(1, 'Vui lòng nhập địa chỉ'),
+  shippingCity: z.string().min(1, 'Vui lòng chọn tỉnh/thành phố'),
+  shippingDistrict: z.string().min(1, 'Vui lòng chọn quận/huyện'),
+  shippingWard: z.string().optional(),
+  note: z.string().optional(),
+  paymentMethod: z.enum(['cod', 'bank_transfer'], { errorMap: () => ({ message: 'Vui lòng chọn phương thức thanh toán' }) }),
+  items: z.array(z.object({
+    productId: z.number(),
+    variantId: z.number().nullable().optional(),
+    quantity: z.number().min(1),
+    price: z.number(),
+  })).min(1, 'Giỏ hàng trống'),
+});
+
+export type CheckoutInput = z.infer<typeof checkoutSchema>;
+

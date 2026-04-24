@@ -25,8 +25,6 @@ export async function PUT(
     const banner = await prisma.banner.update({
       where: { id: bannerId },
       data: {
-        ...(body.title !== undefined && { title: body.title.trim() }),
-        ...(body.subtitle !== undefined && { subtitle: body.subtitle?.trim() || null }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl.trim() }),
         ...(body.linkUrl !== undefined && { linkUrl: body.linkUrl?.trim() || null }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),

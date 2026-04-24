@@ -3,7 +3,7 @@
 // ============================================================
 // HeroBanner Component - Carousel banner trang chủ
 // API-driven: Lấy banners từ /api/banners
-// Fallback dữ liệu mặc định nếu chưa có banner trong DB
+// Banner chỉ gồm: ảnh full-width + link (không title/subtitle)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,25 +14,14 @@ import { cn } from '@/lib/utils';
 
 interface BannerData {
   id: number;
-  title: string;
-  subtitle: string | null;
   imageUrl: string;
   linkUrl: string | null;
 }
 
-// Gradient fallback khi không có ảnh thật
-const gradients = [
-  'from-amber-50 to-orange-50',
-  'from-slate-100 to-blue-50',
-  'from-emerald-50 to-teal-50',
-  'from-rose-50 to-pink-50',
-];
-
-// Dữ liệu mặc định khi DB chưa có banner
+// Fallback banners khi DB chưa có
 const defaultBanners: BannerData[] = [
-  { id: 1, title: 'Bộ Sưu Tập\nMùa Hè 2026', subtitle: 'Giảm đến 40% toàn bộ Sofa & Armchair', imageUrl: '', linkUrl: '/products?category=sofa' },
-  { id: 2, title: 'Phòng Ngủ\nHoàn Hảo', subtitle: 'Giường ngủ cao cấp - Thiết kế Bắc Âu', imageUrl: '', linkUrl: '/products?category=giuong-ngu' },
-  { id: 3, title: 'Thiết Kế\nNội Thất', subtitle: 'Dịch vụ thi công trọn gói - Tư vấn miễn phí', imageUrl: '', linkUrl: '/thiet-ke-thi-cong' },
+  { id: 1, imageUrl: '/images/banners/banner-1.jpg', linkUrl: '/products' },
+  { id: 2, imageUrl: '/images/banners/banner-2.jpg', linkUrl: '/products?category=sofa' },
 ];
 
 const HeroBanner = () => {
@@ -40,6 +29,7 @@ const HeroBanner = () => {
   const [current, setCurrent] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [useFallback, setUseFallback] = useState(false);
 
   // Fetch banners từ API
   useEffect(() => {
@@ -47,9 +37,17 @@ const HeroBanner = () => {
       .then((res) => res.json())
       .then((data) => {
         const apiBanners = data.banners || [];
-        setBanners(apiBanners.length > 0 ? apiBanners : defaultBanners);
+        if (apiBanners.length > 0) {
+          setBanners(apiBanners);
+        } else {
+          setBanners(defaultBanners);
+          setUseFallback(true);
+        }
       })
-      .catch(() => setBanners(defaultBanners))
+      .catch(() => {
+        setBanners(defaultBanners);
+        setUseFallback(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -87,87 +85,77 @@ const HeroBanner = () => {
 
   if (banners.length === 0) return null;
 
+  // Fallback gradient banners khi không có ảnh thật
+  const gradients = ['from-amber-50 to-orange-50', 'from-slate-100 to-blue-50', 'from-emerald-50 to-teal-50'];
+  const fallbackTitles = ['Bộ Sưu Tập\nMùa Hè 2026', 'Phòng Ngủ\nHoàn Hảo', 'Thiết Kế\nNội Thất'];
+  const fallbackSubtitles = ['Giảm đến 40% toàn bộ Sofa & Armchair', 'Giường ngủ cao cấp - Thiết kế Bắc Âu', 'Dịch vụ thi công trọn gói'];
+
   return (
     <section className="relative w-full overflow-hidden">
       <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[560px]">
-        {banners.map((banner, index) => (
-          <div
-            key={banner.id}
-            className={cn(
-              'absolute inset-0 transition-all duration-700 ease-in-out',
-              index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            )}
-          >
-            {/* Banner có ảnh thật */}
-            {banner.imageUrl ? (
-              <div className="relative w-full h-full">
+        {banners.map((banner, index) => {
+          const BannerContent = (
+            <div
+              className={cn(
+                'absolute inset-0 transition-all duration-700 ease-in-out',
+                index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              )}
+            >
+              {!useFallback ? (
+                /* Banner ảnh thật từ API */
                 <Image
                   src={banner.imageUrl}
-                  alt={banner.title}
+                  alt={`Banner ${index + 1}`}
                   fill
                   className="object-cover"
                   priority={index === 0}
                   unoptimized
                 />
-                {/* Overlay gradient cho text readability */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent" />
-
-                <div className="absolute inset-0 container-main flex items-center">
-                  <div className={cn(
-                    'max-w-lg transition-all duration-700 delay-200',
-                    index === current ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'
-                  )}>
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight whitespace-pre-line text-white drop-shadow-lg">
-                      {banner.title}
-                    </h2>
-                    {banner.subtitle && (
-                      <p className="mt-4 text-base md:text-lg text-white/90 max-w-md">
-                        {banner.subtitle}
-                      </p>
-                    )}
-                    {banner.linkUrl && (
-                      <Link href={banner.linkUrl} className="inline-block mt-6 md:mt-8 btn-primary rounded">
-                        Khám phá ngay
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Banner fallback (gradient + emoji) */
-              <div className={cn('w-full h-full bg-gradient-to-r', gradients[index % gradients.length])}>
-                <div className="container-main h-full flex items-center">
-                  <div className="grid grid-cols-1 md:grid-cols-2 items-center w-full gap-8">
-                    <div className={cn(
-                      'transition-all duration-700 delay-200',
-                      index === current ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'
-                    )}>
-                      <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight whitespace-pre-line text-navy">
-                        {banner.title}
-                      </h2>
-                      {banner.subtitle && (
+              ) : (
+                /* Fallback gradient khi chưa có banner */
+                <div className={cn('w-full h-full bg-gradient-to-r', gradients[index % gradients.length])}>
+                  <div className="container-main h-full flex items-center">
+                    <div className="grid grid-cols-1 md:grid-cols-2 items-center w-full gap-8">
+                      <div className={cn(
+                        'transition-all duration-700 delay-200',
+                        index === current ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'
+                      )}>
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight whitespace-pre-line text-navy">
+                          {fallbackTitles[index % fallbackTitles.length]}
+                        </h2>
                         <p className="mt-4 text-base md:text-lg text-text-secondary max-w-md">
-                          {banner.subtitle}
+                          {fallbackSubtitles[index % fallbackSubtitles.length]}
                         </p>
-                      )}
-                      {banner.linkUrl && (
-                        <Link href={banner.linkUrl} className="inline-block mt-6 md:mt-8 btn-primary rounded">
-                          Khám phá ngay
-                        </Link>
-                      )}
-                    </div>
-                    <div className={cn(
-                      'hidden md:flex items-center justify-center transition-all duration-700 delay-300',
-                      index === current ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-10 opacity-0 scale-95'
-                    )}>
-                      <span className="text-[180px] lg:text-[220px] drop-shadow-lg">🛋️</span>
+                        {banner.linkUrl && (
+                          <Link href={banner.linkUrl} className="inline-block mt-6 md:mt-8 btn-primary rounded">
+                            Khám phá ngay
+                          </Link>
+                        )}
+                      </div>
+                      <div className={cn(
+                        'hidden md:flex items-center justify-center transition-all duration-700 delay-300',
+                        index === current ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-10 opacity-0 scale-95'
+                      )}>
+                        <span className="text-[180px] lg:text-[220px] drop-shadow-lg">🛋️</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+
+          // Wrap trong Link nếu có linkUrl và là ảnh thật
+          if (banner.linkUrl && !useFallback) {
+            return (
+              <Link key={banner.id} href={banner.linkUrl} className="block">
+                {BannerContent}
+              </Link>
+            );
+          }
+
+          return <div key={banner.id}>{BannerContent}</div>;
+        })}
       </div>
 
       {/* Navigation arrows */}
