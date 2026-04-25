@@ -15,6 +15,11 @@ export async function GET(
 
     const post = await prisma.post.findFirst({
       where: { slug, isPublished: true },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
     });
 
     if (!post) {

@@ -255,6 +255,22 @@ model Banner {
   @@map("banners")
 }
 
+// --- Danh mục tin tức ---
+model PostCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(200)
+  description String?  @db.VarChar(500)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  posts Post[]
+
+  @@map("post_categories")
+}
+
 // --- Bài viết / Tin tức ---
 model Post {
   id           Int      @id @default(autoincrement())
@@ -264,11 +280,15 @@ model Post {
   content      String?  @db.LongText
   thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(500)
   authorName   String?  @map("author_name") @db.VarChar(200)
+  categoryId   Int?     @map("category_id")
   isPublished  Boolean  @default(true) @map("is_published")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  category PostCategory? @relation(fields: [categoryId], references: [id])
+
   @@index([slug])
   @@index([isPublished])
+  @@index([categoryId])
   @@map("posts")
 }

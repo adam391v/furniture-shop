@@ -3,21 +3,25 @@
 // ============================================================
 // Admin - Quản lý Tin tức (Blog Posts)
 // CRUD: Thêm / Sửa / Xóa bài viết
-// Rich text editor cho nội dung (React Quill)
+// Rich text editor cho nội dung (TipTap - RichTextEditor)
+// Hỗ trợ chọn danh mục tin tức
 // ============================================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit, Trash2, Eye, EyeOff, Loader2, X,
-  Search, FileText, Calendar, ChevronLeft, ChevronRight
+  Search, FileText, Calendar, ChevronLeft, ChevronRight, Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import ImageUpload from '@/components/admin/ImageUpload';
-import dynamic from 'next/dynamic';
+import RichTextEditor from '@/components/admin/RichTextEditor';
 
-// Dynamic import React Quill (không hỗ trợ SSR)
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+interface PostCategory {
+  id: number;
+  name: string;
+  slug: string;
+}
 
 interface Post {
   id: number;
@@ -27,12 +31,15 @@ interface Post {
   content: string | null;
   thumbnailUrl: string | null;
   authorName: string | null;
+  categoryId: number | null;
+  category: PostCategory | null;
   isPublished: boolean;
   createdAt: string;
 }
 
 const AdminPostsPage = () => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [categories, setCategories] = useState<PostCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -48,25 +55,23 @@ const AdminPostsPage = () => {
     excerpt: '',
     content: '',
     authorName: '',
+    categoryId: '',
     isPublished: true,
   });
   const [thumbnail, setThumbnail] = useState<string[]>([]);
-  const quillRef = useRef<HTMLDivElement>(null);
 
-  // Quill modules - hỗ trợ upload ảnh
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['blockquote', 'code-block'],
-        ['link', 'image'],
-        [{ align: [] }],
-        ['clean'],
-      ],
-    },
-  };
+  // Fetch danh mục tin tức
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/post-categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories || []);
+      }
+    } catch {
+      // Không cần hiển thị lỗi
+    }
+  }, []);
 
   // Fetch danh sách bài viết
   const fetchPosts = useCallback(async () => {
@@ -94,12 +99,13 @@ const AdminPostsPage = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [fetchPosts]);
+    fetchCategories();
+  }, [fetchPosts, fetchCategories]);
 
   // Mở form tạo mới
   const openCreate = () => {
     setEditingPost(null);
-    setForm({ title: '', excerpt: '', content: '', authorName: '', isPublished: true });
+    setForm({ title: '', excerpt: '', content: '', authorName: '', categoryId: '', isPublished: true });
     setThumbnail([]);
     setShowEditor(true);
   };
@@ -112,6 +118,7 @@ const AdminPostsPage = () => {
       excerpt: post.excerpt || '',
       content: post.content || '',
       authorName: post.authorName || '',
+      categoryId: post.categoryId?.toString() || '',
       isPublished: post.isPublished,
     });
     setThumbnail(post.thumbnailUrl ? [post.thumbnailUrl] : []);
@@ -133,6 +140,7 @@ const AdminPostsPage = () => {
         content: form.content,
         thumbnailUrl: thumbnail[0] || null,
         authorName: form.authorName || 'Admin',
+        categoryId: form.categoryId || null,
         isPublished: form.isPublished,
       };
 
@@ -190,6 +198,7 @@ const AdminPostsPage = () => {
           content: post.content,
           thumbnailUrl: post.thumbnailUrl,
           authorName: post.authorName,
+          categoryId: post.categoryId,
           isPublished: !post.isPublished,
         }),
       });
@@ -274,18 +283,13 @@ const AdminPostsPage = () => {
             </div>
 
             {/* Nội dung Rich Text */}
-            <div className="bg-white rounded-xl border border-border-light p-5" ref={quillRef}>
-              <label className="block text-sm font-semibold text-navy mb-2">Nội dung bài viết</label>
-              <div className="prose-editor">
-                <ReactQuill
-                  theme="snow"
-                  value={form.content}
-                  onChange={(value: string) => setForm({ ...form, content: value })}
-                  modules={quillModules}
-                  placeholder="Viết nội dung bài viết tại đây..."
-                  className="bg-white rounded-lg min-h-[400px]"
-                />
-              </div>
+            <div className="bg-white rounded-xl border border-border-light p-5">
+              <RichTextEditor
+                value={form.content}
+                onChange={(html: string) => setForm({ ...form, content: html })}
+                label="Nội dung bài viết"
+                placeholder="Viết nội dung bài viết tại đây..."
+              />
             </div>
           </div>
 
@@ -313,6 +317,29 @@ const AdminPostsPage = () => {
                 </div>
                 <span className="text-sm text-navy">{form.isPublished ? 'Đã xuất bản' : 'Bản nháp'}</span>
               </label>
+            </div>
+
+            {/* Danh mục tin tức */}
+            <div className="bg-white rounded-xl border border-border-light p-5">
+              <label className="block text-sm font-semibold text-navy mb-2">
+                <span className="flex items-center gap-1.5">
+                  <Tag size={14} />
+                  Danh mục
+                </span>
+              </label>
+              <select
+                value={form.categoryId}
+                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                className="w-full px-4 py-2.5 border border-border rounded-lg text-sm outline-none focus:border-primary transition-colors bg-white appearance-none cursor-pointer"
+              >
+                <option value="">— Chọn danh mục —</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-text-muted mt-1.5">
+                Phân loại bài viết vào danh mục phù hợp
+              </p>
             </div>
 
             {/* Ảnh đại diện */}
@@ -414,12 +441,18 @@ const AdminPostsPage = () => {
                     {post.excerpt && (
                       <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{post.excerpt}</p>
                     )}
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-text-muted flex-wrap">
                       <span className="flex items-center gap-1">
                         <Calendar size={12} />
                         {formatDate(post.createdAt)}
                       </span>
                       <span>{post.authorName || 'Admin'}</span>
+                      {post.category && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-medium">
+                          <Tag size={10} />
+                          {post.category.name}
+                        </span>
+                      )}
                       <span className={cn(
                         'px-2 py-0.5 rounded-full text-[10px] font-medium',
                         post.isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'

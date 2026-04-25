@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, User, ArrowLeft, Loader2, Share2, Facebook, FileText } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Loader2, Share2, FileText, Tag } from 'lucide-react';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import type { BlogPost } from '@/types';
 
@@ -95,7 +95,7 @@ const BlogDetailPage = () => {
         <article className="max-w-4xl mx-auto pb-16">
           {/* Header bài viết */}
           <header className="py-8 md:py-12 text-center">
-            <div className="flex items-center justify-center gap-4 text-sm text-text-muted mb-5">
+            <div className="flex items-center justify-center gap-4 text-sm text-text-muted mb-5 flex-wrap">
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} />
                 {formatDate(post.createdAt)}
@@ -105,6 +105,15 @@ const BlogDetailPage = () => {
                   <User size={14} />
                   {post.authorName}
                 </span>
+              )}
+              {post.category && (
+                <Link
+                  href={`/tin-tuc?category=${post.category.slug}`}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                >
+                  <Tag size={13} />
+                  {post.category.name}
+                </Link>
               )}
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-[42px] font-extrabold text-navy leading-tight">
@@ -119,7 +128,7 @@ const BlogDetailPage = () => {
 
           {/* Ảnh đại diện */}
           {post.thumbnailUrl && (
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-10 shadow-lg">
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-10 ">
               <Image
                 src={post.thumbnailUrl}
                 alt={post.title}
@@ -166,7 +175,7 @@ const BlogDetailPage = () => {
                   rel="noopener noreferrer"
                   className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
                 >
-                  <Facebook size={16} />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                 </a>
                 <button
                   onClick={() => {

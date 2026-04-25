@@ -142,6 +142,17 @@ export interface Banner {
 }
 
 // --- Blog ---
+export interface PostCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+  _count?: { posts: number };
+}
+
 export interface BlogPost {
   id: number;
   title: string;
@@ -150,6 +161,8 @@ export interface BlogPost {
   content: string;
   thumbnailUrl: string;
   authorName: string;
+  categoryId?: number;
+  category?: Pick<PostCategory, 'id' | 'name' | 'slug'>;
   createdAt: string;
 }
 

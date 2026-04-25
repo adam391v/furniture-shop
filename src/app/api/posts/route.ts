@@ -1,6 +1,6 @@
 // ============================================================
 // Public API - Danh sách bài viết
-// GET /api/posts - List + Search + Pagination
+// GET /api/posts - List + Search + Pagination + Filter by category
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '9');
     const search = searchParams.get('search') || '';
+    const categorySlug = searchParams.get('category') || '';
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { isPublished: true };
@@ -23,7 +24,12 @@ export async function GET(request: Request) {
       ];
     }
 
-    const [posts, total] = await Promise.all([
+    // Filter theo danh mục (bằng slug)
+    if (categorySlug) {
+      where.category = { slug: categorySlug };
+    }
+
+    const [posts, total, categories] = await Promise.all([
       prisma.post.findMany({
         where,
         select: {
@@ -34,16 +40,31 @@ export async function GET(request: Request) {
           thumbnailUrl: true,
           authorName: true,
           createdAt: true,
+          category: {
+            select: { id: true, name: true, slug: true },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.post.count({ where }),
+      // Lấy danh sách danh mục active (cho filter phía client)
+      prisma.postCategory.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: { select: { posts: { where: { isPublished: true } } } },
+        },
+        orderBy: { sortOrder: 'asc' },
+      }),
     ]);
 
     return NextResponse.json({
       data: posts,
+      categories,
       total,
       page,
       limit,

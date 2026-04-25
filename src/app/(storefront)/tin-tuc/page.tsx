@@ -3,40 +3,59 @@
 // ============================================================
 // Trang Tin Tức - Danh sách bài viết (Blog)
 // Layout tham khảo: MOHO Blog Media
-// Card ảnh + tiêu đề + excerpt + ngày đăng
+// Card ảnh + tiêu đề + excerpt + ngày đăng + danh mục
+// Filter theo danh mục
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, User, Loader2, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, User, Loader2, FileText, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import { cn } from '@/lib/utils';
 import type { BlogPost } from '@/types';
 
+interface CategoryWithCount {
+  id: number;
+  name: string;
+  slug: string;
+  _count: { posts: number };
+}
+
 const BlogListPage = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [activeCategory, setActiveCategory] = useState('');
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/posts?page=${page}&limit=9`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '9',
+      });
+      if (activeCategory) params.set('category', activeCategory);
+
+      const res = await fetch(`/api/posts?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data.data || []);
         setTotalPages(data.totalPages || 1);
         setTotal(data.total || 0);
+        if (data.categories) {
+          setCategories(data.categories);
+        }
       }
     } catch {
       console.error('Lỗi tải bài viết');
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, activeCategory]);
 
   useEffect(() => {
     fetchPosts();
@@ -50,13 +69,19 @@ const BlogListPage = () => {
     });
   };
 
+  // Chọn danh mục → reset page
+  const handleCategoryFilter = (slug: string) => {
+    setActiveCategory(slug === activeCategory ? '' : slug);
+    setPage(1);
+  };
+
   return (
     <div className="bg-bg-primary min-h-screen">
       <div className="container-main">
         <Breadcrumb items={[{ label: 'Tin tức' }]} />
 
         {/* Hero banner */}
-        <div className="relative py-12 md:py-16 text-center">
+        {/* <div className="relative py-12 md:py-16 text-center">
           <div className="absolute inset-0 bg-gradient-to-br from-navy/5 via-transparent to-primary/5 rounded-2xl" />
           <div className="relative z-10">
             <h1 className="text-3xl md:text-4xl font-extrabold text-navy tracking-tight">
@@ -70,7 +95,45 @@ const BlogListPage = () => {
               <span>{total} bài viết</span>
             </div>
           </div>
-        </div>
+        </div> */}
+
+        {/* Filter danh mục */}
+        {categories.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mb-8">
+            <button
+              onClick={() => handleCategoryFilter('')}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-medium transition-all border',
+                !activeCategory
+                  ? 'bg-navy text-white border-navy shadow-sm'
+                  : 'bg-white text-navy border-border hover:border-primary hover:text-primary'
+              )}
+            >
+              Tất cả
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryFilter(cat.slug)}
+                className={cn(
+                  'px-4 py-2 rounded-full text-sm font-medium transition-all border flex items-center gap-1.5',
+                  activeCategory === cat.slug
+                    ? 'bg-navy text-white border-navy shadow-sm'
+                    : 'bg-white text-navy border-border hover:border-primary hover:text-primary'
+                )}
+              >
+                <Tag size={13} />
+                {cat.name}
+                <span className={cn(
+                  'text-[10px] ml-0.5',
+                  activeCategory === cat.slug ? 'text-white/70' : 'text-text-muted'
+                )}>
+                  ({cat._count.posts})
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Grid bài viết */}
         <div className="pb-16">
@@ -83,7 +146,17 @@ const BlogListPage = () => {
             <div className="flex flex-col items-center justify-center py-20 text-text-muted">
               <FileText size={60} className="mb-4 opacity-50" />
               <p className="text-lg font-medium">Chưa có bài viết nào</p>
-              <p className="text-sm mt-1">Hãy quay lại sau nhé!</p>
+              <p className="text-sm mt-1">
+                {activeCategory ? 'Không có bài viết trong danh mục này' : 'Hãy quay lại sau nhé!'}
+              </p>
+              {activeCategory && (
+                <button
+                  onClick={() => handleCategoryFilter('')}
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+                >
+                  Xem tất cả bài viết
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -112,7 +185,7 @@ const BlogListPage = () => {
                         )}
                       </div>
                       <div className="p-8 md:p-10 flex flex-col justify-center">
-                        <div className="flex items-center gap-3 text-xs text-text-muted mb-4">
+                        <div className="flex items-center gap-3 text-xs text-text-muted mb-4 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Calendar size={13} />
                             {formatDate(posts[0].createdAt)}
@@ -121,6 +194,12 @@ const BlogListPage = () => {
                             <span className="flex items-center gap-1">
                               <User size={13} />
                               {posts[0].authorName}
+                            </span>
+                          )}
+                          {posts[0].category && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+                              <Tag size={11} />
+                              {posts[0].category.name}
                             </span>
                           )}
                         </div>
@@ -162,6 +241,15 @@ const BlogListPage = () => {
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-primary/5 to-navy/5 flex items-center justify-center">
                             <FileText size={40} className="text-text-muted/30" />
+                          </div>
+                        )}
+                        {/* Badge danh mục overlay */}
+                        {post.category && (
+                          <div className="absolute top-3 left-3">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-[11px] font-medium text-navy shadow-sm">
+                              <Tag size={11} className="text-primary" />
+                              {post.category.name}
+                            </span>
                           </div>
                         )}
                       </div>

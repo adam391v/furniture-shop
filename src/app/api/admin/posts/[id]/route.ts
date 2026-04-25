@@ -14,7 +14,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const post = await prisma.post.findUnique({ where: { id: parseInt(id) } });
+    const post = await prisma.post.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    });
 
     if (!post) {
       return NextResponse.json({ error: 'Bài viết không tồn tại' }, { status: 404 });
@@ -34,7 +41,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, excerpt, content, thumbnailUrl, authorName, isPublished } = body;
+    const { title, excerpt, content, thumbnailUrl, authorName, isPublished, categoryId } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Tiêu đề không được để trống' }, { status: 400 });
@@ -49,6 +56,14 @@ export async function PUT(
         thumbnailUrl: thumbnailUrl || null,
         authorName: authorName?.trim() || 'Admin',
         isPublished: isPublished ?? true,
+        category: categoryId
+          ? { connect: { id: parseInt(categoryId) } }
+          : { disconnect: true },
+      },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
       },
     });
 

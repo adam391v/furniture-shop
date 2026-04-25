@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search') || '';
+    const categoryId = searchParams.get('categoryId');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
@@ -39,9 +40,18 @@ export async function GET(request: Request) {
       ];
     }
 
+    if (categoryId) {
+      where.categoryId = parseInt(categoryId);
+    }
+
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
         where,
+        include: {
+          category: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -62,7 +72,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, excerpt, content, thumbnailUrl, authorName, isPublished } = body;
+    const { title, excerpt, content, thumbnailUrl, authorName, isPublished, categoryId } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Tiêu đề không được để trống' }, { status: 400 });
@@ -79,6 +89,12 @@ export async function POST(request: Request) {
         thumbnailUrl: thumbnailUrl || null,
         authorName: authorName?.trim() || 'Admin',
         isPublished: isPublished ?? true,
+        ...(categoryId ? { category: { connect: { id: parseInt(categoryId) } } } : {}),
+      },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
       },
     });
 
