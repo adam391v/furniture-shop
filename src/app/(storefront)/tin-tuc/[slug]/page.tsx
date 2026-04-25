@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { Calendar, User, ArrowLeft, Loader2, Share2, FileText, Tag } from 'lucide-react';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import type { BlogPost } from '@/types';
+import RecentPostsSidebar from '@/components/storefront/RecentPostsSidebar';
 
 const BlogDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -84,7 +85,7 @@ const BlogDetailPage = () => {
 
   return (
     <div className="bg-bg-primary min-h-screen">
-      <div className="container-main">
+      <div className="container-main pt-2">
         <Breadcrumb
           items={[
             { label: 'Tin tức', href: '/tin-tuc' },
@@ -92,9 +93,16 @@ const BlogDetailPage = () => {
           ]}
         />
 
-        <article className="max-w-4xl mx-auto pb-16">
-          {/* Header bài viết */}
-          <header className="py-8 md:py-12 text-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-16 pt-6">
+          {/* Sidebar (bên trái) */}
+          <aside className="lg:col-span-4 order-2 lg:order-1">
+            <RecentPostsSidebar currentPostSlug={post.slug} />
+          </aside>
+
+          {/* Nội dung bài viết (bên phải) */}
+          <article className="lg:col-span-8 order-1 lg:order-2 bg-white p-6 md:p-8 lg:p-10 rounded-2xl  border border-border-light">
+            {/* Header bài viết */}
+          <header className="py-8 md:py-6 pt-0! text-center">
             <div className="flex items-center justify-center gap-4 text-sm text-text-muted mb-5 flex-wrap">
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} />
@@ -116,7 +124,7 @@ const BlogDetailPage = () => {
                 </Link>
               )}
             </div>
-            <h1 className="text-3xl md:text-4xl lg:text-[42px] font-extrabold text-navy leading-tight">
+            <h1 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-navy leading-tight">
               {post.title}
             </h1>
             {post.excerpt && (
@@ -190,7 +198,8 @@ const BlogDetailPage = () => {
               </div>
             </div>
           </div>
-        </article>
+          </article>
+        </div>
       </div>
     </div>
   );

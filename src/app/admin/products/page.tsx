@@ -8,29 +8,48 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  Plus, Search, Edit, Trash2, Eye, Filter,
+  Plus, Search, Edit, Trash2, Eye, Filter, X,
   ChevronLeft, ChevronRight, ToggleLeft, ToggleRight, Loader2, PackageX
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
-import { adminGetProducts, adminDeleteProduct, adminToggleProduct } from '@/lib/api/products';
+import { adminGetProducts, adminDeleteProduct, adminToggleProduct, getCategories } from '@/lib/api/products';
 import toast from 'react-hot-toast';
-import type { Product } from '@/types';
+import type { Product, Category } from '@/types';
 
 const AdminProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [search, setSearch] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [status, setStatus] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const perPage = 10;
 
+  useEffect(() => {
+    getCategories().then(setCategories).catch(console.error);
+  }, []);
+
   // Fetch sản phẩm từ API
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminGetProducts({ page: currentPage, limit: perPage, search });
+      const data = await adminGetProducts({
+        page: currentPage,
+        limit: perPage,
+        search,
+        categoryId,
+        status,
+        minPrice,
+        maxPrice
+      });
       setProducts(data.products);
       setPagination({ total: data.pagination.total, totalPages: data.pagination.totalPages });
     } catch {
@@ -38,17 +57,17 @@ const AdminProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search]);
+  }, [currentPage, search, categoryId, status, minPrice, maxPrice]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Debounce search
+  // Debounce search & filters
   useEffect(() => {
-    const timer = setTimeout(() => setCurrentPage(1), 300);
+    const timer = setTimeout(() => setCurrentPage(1), 500);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, categoryId, status, minPrice, maxPrice]);
 
   // Xóa sản phẩm
   const handleDelete = async (productId: number) => {
@@ -106,11 +125,90 @@ const AdminProductsPage = () => {
               className="bg-transparent text-sm outline-none flex-1"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-lg text-sm text-navy hover:bg-bg-secondary transition-colors">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm transition-colors",
+              showFilters ? "border-primary text-primary bg-primary/5" : "border-border text-navy hover:bg-bg-secondary"
+            )}
+          >
             <Filter size={16} />
             <span className="hidden sm:inline">Bộ lọc</span>
           </button>
         </div>
+
+        {/* Expanded Filters */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-border-light grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Danh mục */}
+            <div>
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Danh mục</label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm text-navy outline-none focus:border-primary transition-colors"
+              >
+                <option value="">Tất cả danh mục</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Trạng thái */}
+            <div>
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Trạng thái</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm text-navy outline-none focus:border-primary transition-colors"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="active">Đang hiển thị</option>
+                <option value="inactive">Đã ẩn</option>
+              </select>
+            </div>
+
+            {/* Khoảng giá */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Khoảng giá (VNĐ)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Từ..."
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm text-navy outline-none focus:border-primary transition-colors"
+                />
+                <span className="text-text-muted">-</span>
+                <input
+                  type="number"
+                  placeholder="Đến..."
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm text-navy outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Nút Reset */}
+            <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setCategoryId('');
+                  setStatus('');
+                  setMinPrice('');
+                  setMaxPrice('');
+                }}
+                className="flex items-center gap-1.5 text-sm text-red hover:text-red-dark hover:bg-red/5 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <X size={14} />
+                Xóa bộ lọc
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}

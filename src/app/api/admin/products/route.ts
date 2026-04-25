@@ -36,19 +36,40 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = new URL(request.url).searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search') || '';
+    const categoryId = searchParams.get('categoryId');
+    const status = searchParams.get('status');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
 
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search } },
-            { sku: { contains: search } },
-          ],
-        }
-      : {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { sku: { contains: search } },
+      ];
+    }
+    
+    if (categoryId) {
+      where.categoryId = parseInt(categoryId);
+    }
+    
+    if (status === 'active') {
+      where.isActive = true;
+    } else if (status === 'inactive') {
+      where.isActive = false;
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = parseFloat(minPrice);
+      if (maxPrice) where.price.lte = parseFloat(maxPrice);
+    }
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({

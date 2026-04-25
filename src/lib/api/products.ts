@@ -91,16 +91,23 @@ export const getCategories = async (): Promise<Category[]> => {
 // ADMIN API - Dùng cho admin dashboard
 // ============================================================
 
-/** [Admin] Lấy danh sách sản phẩm */
 export const adminGetProducts = async (params?: {
   page?: number;
   limit?: number;
   search?: string;
+  categoryId?: number | string;
+  status?: string;
+  minPrice?: number | string;
+  maxPrice?: number | string;
 }): Promise<{ products: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set('page', params.page.toString());
   if (params?.limit) searchParams.set('limit', params.limit.toString());
   if (params?.search) searchParams.set('search', params.search);
+  if (params?.categoryId) searchParams.set('categoryId', params.categoryId.toString());
+  if (params?.status) searchParams.set('status', params.status);
+  if (params?.minPrice) searchParams.set('minPrice', params.minPrice.toString());
+  if (params?.maxPrice) searchParams.set('maxPrice', params.maxPrice.toString());
 
   return fetcher(`${API_BASE}/admin/products?${searchParams.toString()}`);
 };
