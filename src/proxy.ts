@@ -1,6 +1,7 @@
 // ============================================================
-// Next.js Middleware - Bảo vệ route cần đăng nhập + phân quyền admin
+// Next.js Proxy - Bảo vệ route cần đăng nhập + phân quyền admin
 // File này PHẢI nằm ở root src/ (không phải trong app/)
+// Từ Next.js 16, "middleware" đã được đổi tên thành "proxy"
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -16,7 +17,7 @@ const adminRoutes = ['/admin'];
 // Route chỉ dành cho guest (chưa đăng nhập)
 const guestOnlyRoutes = ['/login', '/register'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Lấy token từ cookie
@@ -58,7 +59,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Chỉ apply middleware cho các path cần thiết (tránh chạy cho static files)
+// Chỉ apply proxy cho các path cần thiết (tránh chạy cho static files)
 export const config = {
   matcher: [
     '/login',

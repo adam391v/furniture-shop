@@ -2,17 +2,20 @@
 
 // ============================================================
 // Trang Danh Sách Sản Phẩm - API-driven
-// Grid 4 cột + Bộ lọc + Sort + Pagination thực
+// Đọc URL searchParams để filter/search
+// Đồng bộ state với URL (reload giữ nguyên filter)
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import ProductCard from '@/components/product/ProductCard';
 import ProductFilters from '@/components/product/ProductFilters';
 import Breadcrumb from '@/components/ui/Breadcrumb';
-import { getProducts } from '@/lib/api/products';
+import { getProducts, getCategories } from '@/lib/api/products';
 import { LayoutGrid, List, Loader2, PackageX } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Product } from '@/types';
+import type { Product, Category } from '@/types';
 
 const sortOptions = [
   { label: 'Mới nhất', value: 'newest' },
@@ -21,22 +24,68 @@ const sortOptions = [
   { label: 'Bán chạy', value: 'bestseller' },
 ];
 
-const ProductsPage = () => {
+// Component chính wrap trong Suspense vì dùng useSearchParams
+const ProductsContent = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Đọc filter từ URL
+  const categoryFromUrl = searchParams.get('category') || '';
+  const searchFromUrl = searchParams.get('search') || '';
+  const minPriceFromUrl = searchParams.get('minPrice') || '';
+  const maxPriceFromUrl = searchParams.get('maxPrice') || '';
+  const sizeFromUrl = searchParams.get('size') || '';
+  const sortFromUrl = searchParams.get('sortBy') || 'newest';
+  const pageFromUrl = parseInt(searchParams.get('page') || '1');
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [categories, setCategories] = useState<Category[]>([]);
 
+  // Lấy tên danh mục hiện tại (cho breadcrumb)
+  const currentCategory = categories.find((c) => c.slug === categoryFromUrl);
+
+  // Fetch danh mục
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  // Hàm cập nhật URL khi thay đổi filter
+  const updateUrl = useCallback((newParams: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    // Cập nhật params
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+
+    // Reset page khi thay đổi filter (không phải pagination)
+    if (!('page' in newParams)) {
+      params.delete('page');
+    }
+
+    router.push(`/products?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  // Fetch sản phẩm khi URL params thay đổi
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getProducts({
-        sortBy: sortBy as 'newest' | 'price_asc' | 'price_desc' | 'bestseller',
-        page: currentPage,
+        sortBy: sortFromUrl as 'newest' | 'price_asc' | 'price_desc' | 'bestseller',
+        page: pageFromUrl,
         limit: 12,
+        categorySlug: categoryFromUrl || undefined,
+        search: searchFromUrl || undefined,
+        minPrice: minPriceFromUrl ? parseInt(minPriceFromUrl) : undefined,
+        maxPrice: maxPriceFromUrl ? parseInt(maxPriceFromUrl) : undefined,
       });
       setProducts(data.data);
       setTotalPages(data.totalPages);
@@ -46,30 +95,60 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, currentPage]);
+  }, [sortFromUrl, pageFromUrl, categoryFromUrl, searchFromUrl, minPriceFromUrl, maxPriceFromUrl]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // Xử lý thay đổi filter từ ProductFilters component
+  const handleFilterChange = (filters: Record<string, string>) => {
+    updateUrl(filters);
+  };
+
+  // Xử lý thay đổi sort
+  const handleSortChange = (value: string) => {
+    updateUrl({ sortBy: value, page: '' });
+  };
+
+  // Xử lý pagination
+  const handlePageChange = (page: number) => {
+    updateUrl({ page: page.toString() });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Breadcrumb
+  const breadcrumbItems = [
+    ...(currentCategory ? [{ label: currentCategory.name }] : [{ label: 'Tất cả sản phẩm' }]),
+  ];
+
+  // Tiêu đề trang
+  const pageTitle = searchFromUrl
+    ? `Kết quả tìm kiếm "${searchFromUrl}"`
+    : currentCategory
+      ? currentCategory.name
+      : 'Tất cả sản phẩm';
+
   return (
     <div className="bg-bg-primary min-h-screen">
       <div className="container-main">
-        <Breadcrumb items={[{ label: 'Tất cả sản phẩm' }]} />
+        <Breadcrumb items={breadcrumbItems} />
 
         {/* Tiêu đề trang */}
         <div className="py-6 border-b border-border-light">
-          <h1 className="text-2xl md:text-3xl font-bold text-navy">
-            Tất cả sản phẩm
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {total} sản phẩm
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold text-navy">{pageTitle}</h1>
+          <p className="mt-1 text-sm text-text-secondary">{total} sản phẩm</p>
         </div>
 
         {/* Bộ lọc + Sắp xếp */}
         <div className="py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-border-light">
-          <ProductFilters />
+          <ProductFilters
+            onFilterChange={handleFilterChange}
+            currentCategory={categoryFromUrl}
+            currentMinPrice={minPriceFromUrl}
+            currentMaxPrice={maxPriceFromUrl}
+            currentSize={sizeFromUrl}
+          />
           <div className="flex items-center gap-3">
             {/* Chế độ hiển thị */}
             <div className="flex items-center border border-border rounded overflow-hidden">
@@ -95,8 +174,8 @@ const ProductsPage = () => {
 
             {/* Dropdown sắp xếp */}
             <select
-              value={sortBy}
-              onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
+              value={sortFromUrl}
+              onChange={(e) => handleSortChange(e.target.value)}
               className="px-3 py-2 border border-border rounded text-sm text-navy bg-white outline-none focus:border-primary"
             >
               {sortOptions.map((opt) => (
@@ -146,10 +225,10 @@ const ProductsPage = () => {
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
-                      onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      onClick={() => handlePageChange(page)}
                       className={cn(
                         'w-10 h-10 flex items-center justify-center rounded text-sm font-medium transition-all',
-                        page === currentPage
+                        page === pageFromUrl
                           ? 'bg-navy text-white'
                           : 'text-navy hover:bg-bg-secondary border border-border'
                       )}
@@ -166,5 +245,16 @@ const ProductsPage = () => {
     </div>
   );
 };
+
+// Wrap với Suspense vì useSearchParams cần nó
+const ProductsPage = () => (
+  <Suspense fallback={
+    <div className="bg-bg-primary min-h-screen flex items-center justify-center">
+      <Loader2 size={32} className="animate-spin text-primary" />
+    </div>
+  }>
+    <ProductsContent />
+  </Suspense>
+);
 
 export default ProductsPage;

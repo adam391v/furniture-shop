@@ -158,8 +158,7 @@ export interface ProductFilter {
   categorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
-  colors?: string[];
-  sizes?: string[];
+  size?: string;
   sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'bestseller';
   search?: string;
   page?: number;

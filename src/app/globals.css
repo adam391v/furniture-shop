@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "react-quill-new/dist/quill.snow.css";
+@plugin "@tailwindcss/typography";
 
 /* ============================================================
    Design System - Furniture Shop (Lấy cảm hứng từ MOHO)

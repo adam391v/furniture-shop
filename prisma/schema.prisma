@@ -254,3 +254,21 @@ model Banner {
 
   @@map("banners")
 }
+
+// --- Bài viết / Tin tức ---
+model Post {
+  id           Int      @id @default(autoincrement())
+  title        String   @db.VarChar(500)
+  slug         String   @unique @db.VarChar(500)
+  excerpt      String?  @db.VarChar(1000)
+  content      String?  @db.LongText
+  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(500)
+  authorName   String?  @map("author_name") @db.VarChar(200)
+  isPublished  Boolean  @default(true) @map("is_published")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([isPublished])
+  @@map("posts")
+}

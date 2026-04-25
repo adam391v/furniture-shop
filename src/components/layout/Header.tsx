@@ -20,7 +20,7 @@ const navItems = [
   { label: 'Sản phẩm', href: '/products', hasDropdown: true },
   { label: 'Thiết kế - Thi công', href: '/thiet-ke-thi-cong', hasDropdown: false },
   { label: 'Khuyến mãi', href: '/khuyen-mai', hasDropdown: true },
-  { label: 'Tin tức', href: '/tin-tuc', hasDropdown: true },
+  { label: 'Tin tức', href: '/tin-tuc', hasDropdown: false },
   { label: 'Về chúng tôi', href: '/ve-chung-toi', hasDropdown: false },
   { label: 'Cửa hàng', href: '/cua-hang', hasDropdown: false },
 ];
@@ -76,6 +76,17 @@ const Header = () => {
     router.push('/');
   };
 
+  // Xử lý tìm kiếm: navigate sang /products?search=xxx
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      router.push(`/products?search=${encodeURIComponent(q)}`);
+      setSearchQuery('');
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   return (
     <header
       className={cn(
@@ -112,9 +123,10 @@ const Header = () => {
             </h1>
           </Link>
 
-          {/* Search Bar */}
+          {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-xl mx-8">
-            <div
+            <form
+              onSubmit={handleSearch}
               className={cn(
                 'flex w-full rounded-sm border transition-all duration-200',
                 isSearchFocused ? 'border-primary shadow-sm' : 'border-border'
@@ -129,16 +141,19 @@ const Header = () => {
                 onBlur={() => setIsSearchFocused(false)}
                 className="flex-1 px-4 py-2.5 text-sm bg-transparent outline-none text-text-primary placeholder:text-text-muted"
               />
-              <button className="px-4 bg-primary text-white hover:bg-primary-dark transition-colors">
+              <button type="submit" className="px-4 bg-primary text-white hover:bg-primary-dark transition-colors">
                 <Search size={18} />
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Search icon mobile */}
-            <button className="md:hidden p-2 text-navy hover:text-primary transition-colors">
+            {/* Search icon mobile - mở menu mobile */}
+            <button
+              className="md:hidden p-2 text-navy hover:text-primary transition-colors"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
               <Search size={22} />
             </button>
 
@@ -323,16 +338,19 @@ const Header = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-40 bg-white animate-fade-in overflow-y-auto">
           <div className="p-4 border-b border-border-light">
-            <div className="flex rounded-sm border border-border">
+            <form onSubmit={handleSearch} className="flex rounded-sm border border-border">
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 px-4 py-2.5 text-sm bg-transparent outline-none"
+                autoFocus
               />
-              <button className="px-4 bg-primary text-white">
+              <button type="submit" className="px-4 bg-primary text-white hover:bg-primary-dark transition-colors">
                 <Search size={18} />
               </button>
-            </div>
+            </form>
           </div>
 
           <nav className="p-4">

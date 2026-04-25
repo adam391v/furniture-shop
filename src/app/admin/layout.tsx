@@ -12,7 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
   FolderTree, Star, Image, Settings, LogOut,
-  Menu, X, ChevronDown, Bell, Search
+  Menu, X, ChevronDown, Bell, Search, FileText
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ const sidebarMenu = [
   { label: 'Danh mục', href: '/admin/categories', icon: FolderTree },
   { label: 'Đánh giá', href: '/admin/reviews', icon: Star },
   { label: 'Banner', href: '/admin/banners', icon: Image },
+  { label: 'Tin tức', href: '/admin/posts', icon: FileText },
   { label: 'Cài đặt', href: '/admin/settings', icon: Settings },
 ];
 

@@ -18,6 +18,9 @@ export async function GET(request: Request) {
     const sortBy = searchParams.get('sortBy') || 'newest';
     const excludeId = searchParams.get('excludeId');
 
+    const size = searchParams.get('size') || '';
+    const categoryId = searchParams.get('categoryId');
+
     // Xây dựng where clause
     const where: Record<string, unknown> = {
       isActive: true,
@@ -37,11 +40,25 @@ export async function GET(request: Request) {
       where.category = { slug: category };
     }
 
+    // Lọc theo danh mục (ID) - dùng cho related products
+    if (categoryId) {
+      where.categoryId = parseInt(categoryId);
+    }
+
     // Lọc theo giá
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) (where.price as Record<string, unknown>).gte = parseInt(minPrice);
       if (maxPrice) (where.price as Record<string, unknown>).lte = parseInt(maxPrice);
+    }
+
+    // Lọc theo kích thước (tìm trong tên SP hoặc variant)
+    if (size) {
+      where.OR = [
+        ...(where.OR as Array<Record<string, unknown>> || []),
+        { name: { contains: size } },
+        { variants: { some: { name: { contains: size } } } },
+      ];
     }
 
     // Loại trừ sản phẩm theo ID (cho related products)

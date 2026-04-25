@@ -36,6 +36,7 @@ export const getProducts = async (
   if (filter?.categorySlug) params.set('category', filter.categorySlug);
   if (filter?.minPrice) params.set('minPrice', filter.minPrice.toString());
   if (filter?.maxPrice) params.set('maxPrice', filter.maxPrice.toString());
+  if (filter?.size) params.set('size', filter.size);
   if (filter?.sortBy) params.set('sortBy', filter.sortBy);
   if (filter?.page) params.set('page', filter.page.toString());
   if (filter?.limit) params.set('limit', filter.limit.toString());
