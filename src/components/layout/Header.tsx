@@ -23,6 +23,7 @@ const navItems = [
   { label: 'Tin tức', href: '/tin-tuc', hasDropdown: false },
   { label: 'Về chúng tôi', href: '/gioi-thieu', hasDropdown: false },
   // { label: 'Cửa hàng', href: '/cua-hang', hasDropdown: false },
+  { label: 'Liên hệ', href: '/lien-he', hasDropdown: false },
 ];
 
 const Header = () => {

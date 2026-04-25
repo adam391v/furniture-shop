@@ -292,3 +292,24 @@ model Post {
   @@index([categoryId])
   @@map("posts")
 }
+
+// --- Liên hệ ---
+model Contact {
+  id        Int           @id @default(autoincrement())
+  name      String        @db.VarChar(200)
+  email     String        @db.VarChar(255)
+  phone     String?       @db.VarChar(20)
+  message   String        @db.Text
+  status    ContactStatus @default(new)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("contacts")
+}
+
+enum ContactStatus {
+  new
+  processed
+}
