@@ -26,6 +26,9 @@ const policyLinks = [
   { href: '/chinh-sach-doi-tra', label: 'Chính sách đổi trả' },
   { href: '/chinh-sach-bao-mat', label: 'Chính sách bảo mật' },
   { href: '/chinh-sach-bao-hanh', label: 'Chính sách bảo hành' },
+  { href: '/huong-dan-mua-hang', label: 'Hướng dẫn mua hàng' },
+  { href: '/huong-dan-thanh-toan', label: 'Hướng dẫn thanh toán' },
+  { href: '/faq', label: 'Câu hỏi thường gặp' },
 ];
 
 const PolicyLayout = ({
