@@ -18,11 +18,11 @@ import type { Category } from '@/types';
 
 const navItems = [
   { label: 'Sản phẩm', href: '/products', hasDropdown: true },
-  { label: 'Thiết kế - Thi công', href: '/thiet-ke-thi-cong', hasDropdown: false },
+  // { label: 'Thiết kế - Thi công', href: '/thiet-ke-thi-cong', hasDropdown: false },
   { label: 'Khuyến mãi', href: '/khuyen-mai', hasDropdown: true },
   { label: 'Tin tức', href: '/tin-tuc', hasDropdown: false },
-  { label: 'Về chúng tôi', href: '/ve-chung-toi', hasDropdown: false },
-  { label: 'Cửa hàng', href: '/cua-hang', hasDropdown: false },
+  { label: 'Về chúng tôi', href: '/gioi-thieu', hasDropdown: false },
+  // { label: 'Cửa hàng', href: '/cua-hang', hasDropdown: false },
 ];
 
 const Header = () => {
